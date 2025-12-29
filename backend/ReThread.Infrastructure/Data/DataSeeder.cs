@@ -69,31 +69,34 @@ public static class DatabaseSeeder
             "M",
             ProductCondition.Excellent,
             designerProfile.Id,
-            categories[2].Id, // Outerwear
+            categories[2].Id,
+            1,// Outerwear
             "Levi's"
         );
 
         var tshirt = Product.Create(
             "Upcycled Band Tee Crop Top",
             "Oversized vintage band tee transformed into a flattering crop top with custom bleach art and distressed edges.",
-            "Started with an oversized Nirvana tee from the 90s. Created unique bleach splatter art, then carefully cut and hemmed into a modern crop silhouette. Safety pin details add edge.",
+            "Started with an oversized Nirvana tee from the 90s. Created unique bleach splatter art, then carefully cut and hemmed into a modern crop silhouette. Safety pin Primarys add edge.",
             35.00m,
             "S",
             ProductCondition.Good,
             designerProfile.Id,
-            categories[0].Id, // Tops
+            categories[0].Id,
+            1,// Tops
             "Vintage Band Tee"
         );
 
         var jeans = Product.Create(
             "High-Waist Patchwork Jeans",
-            "Classic mom jeans redesigned with colorful fabric patches and hand-stitched details.",
+            "Classic mom jeans redesigned with colorful fabric patches and hand-stitched Primarys.",
             "Took a pair of thrifted Levi's 501s and added unique fabric patches from vintage quilts. Each patch tells a story. Hand-stitched for durability.",
             55.00m,
             "L",
             ProductCondition.Excellent,
             designerProfile.Id,
-            categories[1].Id, // Bottoms
+            categories[1].Id,
+            1,// Bottoms
             "Levi's"
         );
 
@@ -101,15 +104,15 @@ public static class DatabaseSeeder
         context.SaveChanges();
 
         // 5. Add Product Images (placeholder URLs)
-        jacket.AddImage("https://placehold.co/600x400/8B9E7D/ffffff?text=Before+Jacket", ProductImageType.Before, 1);
-        jacket.AddImage("https://placehold.co/600x400/C89D7C/ffffff?text=After+Jacket", ProductImageType.After, 2);
-        jacket.AddImage("https://placehold.co/600x400/E8DCC4/ffffff?text=Detail+Embroidery", ProductImageType.Detail, 3);
+        jacket.AddImage("https://placehold.co/600x400/8B9E7D/ffffff?text=Gallery+Jacket", ProductImageType.Gallery, 1);
+        jacket.AddImage("https://placehold.co/600x400/C89D7C/ffffff?text=Primary+Jacket", ProductImageType.Primary, 2);
+        jacket.AddImage("https://placehold.co/600x400/E8DCC4/ffffff?text=Primary+Embroidery", ProductImageType.Primary, 3);
 
-        tshirt.AddImage("https://placehold.co/600x400/8B9E7D/ffffff?text=Before+Tee", ProductImageType.Before, 1);
-        tshirt.AddImage("https://placehold.co/600x400/C89D7C/ffffff?text=After+Tee", ProductImageType.After, 2);
+        tshirt.AddImage("https://placehold.co/600x400/8B9E7D/ffffff?text=Gallery+Tee", ProductImageType.Gallery, 1);
+        tshirt.AddImage("https://placehold.co/600x400/C89D7C/ffffff?text=Primary+Tee", ProductImageType.Primary, 2);
 
-        jeans.AddImage("https://placehold.co/600x400/8B9E7D/ffffff?text=Before+Jeans", ProductImageType.Before, 1);
-        jeans.AddImage("https://placehold.co/600x400/C89D7C/ffffff?text=After+Jeans", ProductImageType.After, 2);
+        jeans.AddImage("https://placehold.co/600x400/8B9E7D/ffffff?text=Gallery+Jeans", ProductImageType.Gallery, 1);
+        jeans.AddImage("https://placehold.co/600x400/C89D7C/ffffff?text=Primary+Jeans", ProductImageType.Primary, 2);
 
         context.SaveChanges();
 

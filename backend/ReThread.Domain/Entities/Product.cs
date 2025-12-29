@@ -1,4 +1,4 @@
-using ReThreaded.Domain.Common;
+﻿using ReThreaded.Domain.Common;
 using ReThreaded.Domain.Enums;
 using ReThreaded.Domain.Exceptions;
 
@@ -13,10 +13,15 @@ public class Product : BaseEntity
     public string? OriginalBrand { get; private set; }
     public string Size { get; private set; }
     public ProductCondition Condition { get; private set; }
+
     public Guid DesignerId { get; private set; }
     public Guid CategoryId { get; private set; }
+
+    public int StockQuantity { get; private set; }
     public bool IsAvailable { get; private set; }
     public bool IsFeatured { get; private set; }
+    public bool IsDeleted { get; private set; }
+
     public int ViewCount { get; private set; }
     public DateTime? SoldAt { get; private set; }
 
@@ -29,6 +34,8 @@ public class Product : BaseEntity
 
     private Product() { }
 
+    // -------------------- CREATE --------------------
+
     public static Product Create(
         string title,
         string description,
@@ -38,9 +45,9 @@ public class Product : BaseEntity
         ProductCondition condition,
         Guid designerId,
         Guid categoryId,
+        int stockQuantity = 1,
         string? originalBrand = null)
     {
-        // Validation
         if (string.IsNullOrWhiteSpace(title))
             throw new DomainException("Product title is required");
 
@@ -65,7 +72,10 @@ public class Product : BaseEntity
         if (categoryId == Guid.Empty)
             throw new DomainException("Category ID is required");
 
-        return new Product
+        if (stockQuantity < 1)
+            throw new DomainException("Stock quantity must be at least 1");
+
+        var product = new Product
         {
             Title = title.Trim(),
             Description = description.Trim(),
@@ -76,11 +86,17 @@ public class Product : BaseEntity
             DesignerId = designerId,
             CategoryId = categoryId,
             OriginalBrand = originalBrand?.Trim(),
-            IsAvailable = true,
+            StockQuantity = stockQuantity,
             IsFeatured = false,
+            IsDeleted = false,
             ViewCount = 0
         };
+
+        product.RecalculateAvailability();
+        return product;
     }
+
+    // -------------------- UPDATE CORE DETAILS --------------------
 
     public void Update(
         string title,
@@ -89,16 +105,29 @@ public class Product : BaseEntity
         decimal price,
         string size,
         ProductCondition condition,
+        Guid categoryId,
         string? originalBrand)
     {
-        if (!IsAvailable)
-            throw new DomainException("Cannot update sold product");
+        if (IsDeleted)
+            throw new DomainException("Deleted product cannot be updated");
 
         if (string.IsNullOrWhiteSpace(title))
             throw new DomainException("Product title is required");
 
+        if (title.Length > 200)
+            throw new DomainException("Title too long (max 200 chars)");
+
+        if (string.IsNullOrWhiteSpace(description))
+            throw new DomainException("Description is required");
+
+        if (string.IsNullOrWhiteSpace(transformationStory))
+            throw new DomainException("Transformation story is required");
+
         if (price <= 0)
             throw new DomainException("Price must be greater than 0");
+
+        if (categoryId == Guid.Empty)
+            throw new DomainException("Category ID is required");
 
         Title = title.Trim();
         Description = description.Trim();
@@ -106,46 +135,44 @@ public class Product : BaseEntity
         Price = price;
         Size = size.Trim().ToUpperInvariant();
         Condition = condition;
+        CategoryId = categoryId;
         OriginalBrand = originalBrand?.Trim();
+
         SetUpdatedAt();
     }
 
-    public void AddImage(string imageUrl, ProductImageType imageType, int displayOrder)
-    {
-        var image = ProductImage.Create(Id, imageUrl, imageType, displayOrder);
-        _images.Add(image);
-        SetUpdatedAt();
-    }
+    // -------------------- STOCK --------------------
 
-    public void RemoveImage(Guid imageId)
+    public void UpdateStock(int newQuantity)
     {
-        var image = _images.FirstOrDefault(i => i.Id == imageId);
-        if (image == null)
-            throw new DomainException("Image not found");
+        if (IsDeleted)
+            throw new DomainException("Deleted product stock cannot be changed");
 
-        _images.Remove(image);
-        SetUpdatedAt();
-    }
+        if (newQuantity < 0)
+            throw new DomainException("Stock cannot be negative");
 
-    public void MarkAsSold()
-    {
+        StockQuantity = newQuantity;
+        RecalculateAvailability();
+
         if (!IsAvailable)
-            throw new DomainException("Product already sold");
+            IsFeatured = false;
 
-        // Validate has required images
-        if (!_images.Any(i => i.ImageType == ProductImageType.Before))
-            throw new DomainException("Product must have at least one Before image");
-
-        if (!_images.Any(i => i.ImageType == ProductImageType.After))
-            throw new DomainException("Product must have at least one After image");
-
-        IsAvailable = false;
-        SoldAt = DateTime.UtcNow;
         SetUpdatedAt();
     }
+
+    // -------------------- FEATURED --------------------
 
     public void MarkAsFeatured()
     {
+        if (IsDeleted)
+            throw new DomainException("Deleted products cannot be featured");
+
+        if (!IsAvailable)
+            throw new DomainException("Only available products can be featured");
+
+        if (!HasRequiredImages())
+            throw new DomainException("Product must have required images to be featured");
+
         IsFeatured = true;
         SetUpdatedAt();
     }
@@ -156,15 +183,64 @@ public class Product : BaseEntity
         SetUpdatedAt();
     }
 
+    // -------------------- IMAGES --------------------
+
+    public void AddImage(string imageUrl, ProductImageType imageType, int displayOrder)
+    {
+        if (IsDeleted)
+            throw new DomainException("Cannot add images to deleted product");
+
+        var image = ProductImage.Create(Id, imageUrl, imageType, displayOrder);
+        _images.Add(image);
+
+        SetUpdatedAt();
+    }
+
+    public void RemoveImage(Guid imageId)
+    {
+        var image = _images.FirstOrDefault(i => i.Id == imageId);
+        if (image == null)
+            throw new DomainException("Image not found");
+
+        _images.Remove(image);
+
+        if (!HasRequiredImages())
+            IsFeatured = false;
+
+        SetUpdatedAt();
+    }
+
+    public bool HasRequiredImages()
+    {
+        return _images.Any(i => i.ImageType == ProductImageType.Primary)
+            && _images.Any(i => i.ImageType == ProductImageType.Gallery);
+    }
+
+    // -------------------- VIEW & DELETE --------------------
+
     public void IncrementViewCount()
     {
+        if (IsDeleted) return;
         ViewCount++;
     }
 
-    // Validation helper
-    public bool HasRequiredImages()
+    public void SoftDelete()
     {
-        return _images.Any(i => i.ImageType == ProductImageType.Before) &&
-               _images.Any(i => i.ImageType == ProductImageType.After);
+        IsDeleted = true;
+        IsFeatured = false;
+        SetUpdatedAt();
+    }
+
+    // -------------------- INTERNAL --------------------
+
+    private void RecalculateAvailability()
+    {
+        IsAvailable = StockQuantity > 0;
+
+        if (!IsAvailable && SoldAt == null)
+            SoldAt = DateTime.UtcNow;
+
+        if (IsAvailable)
+            SoldAt = null;
     }
 }
