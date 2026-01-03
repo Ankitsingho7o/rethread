@@ -7,6 +7,7 @@ public class CartItem : BaseEntity
 {
     public Guid CartId { get; private set; }
     public Guid ProductId { get; private set; }
+    public int Quantity { get; private set; }
 
     // Navigation
     public Cart Cart { get; private set; }
@@ -14,18 +15,18 @@ public class CartItem : BaseEntity
 
     private CartItem() { }
 
-    public static CartItem Create(Guid cartId, Guid productId)
+    public static CartItem Create(Guid cartId, Guid productId, int quantity)
     {
-        if (cartId == Guid.Empty)
-            throw new DomainException("Cart ID is required");
-
-        if (productId == Guid.Empty)
-            throw new DomainException("Product ID is required");
+        if (quantity <= 0 || quantity > 2)
+            throw new DomainException("Invalid quantity");
 
         return new CartItem
         {
             CartId = cartId,
-            ProductId = productId
+            ProductId = productId,
+            Quantity = quantity
         };
     }
+
+
 }

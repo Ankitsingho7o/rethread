@@ -7,9 +7,9 @@ namespace ReThread.Api.Controllers
     [Route("api/products/{productId}/images")]
     public class ProductImagesController : ControllerBase
     {
-        private readonly ProductImageService _service;
+        private readonly IProductImageService _service;
 
-        public ProductImagesController(ProductImageService service)
+        public ProductImagesController(IProductImageService service)
         {
             _service = service;
         }

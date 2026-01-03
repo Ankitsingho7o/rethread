@@ -17,8 +17,7 @@ public class Cart : BaseEntity
 
     public static Cart Create(Guid userId)
     {
-        if (userId == Guid.Empty)
-            throw new DomainException("User ID is required");
+        
 
         return new Cart
         {
@@ -26,22 +25,31 @@ public class Cart : BaseEntity
         };
     }
 
-    public void AddItem(Product product)
+    public void AddItem(Product product, int quantity)
     {
         if (product == null)
             throw new DomainException("Product is required");
 
+        if (quantity <= 0 || quantity > 2)
+            throw new DomainException("Quantity must be between 1 and 2");
+
         if (!product.IsAvailable)
             throw new DomainException("Product is not available");
 
-        // Check if already in cart (unique items!)
+        if (product.StockQuantity < quantity)
+            throw new DomainException("Insufficient stock");
+
+        if (product.DesignerId == UserId)
+            throw new DomainException("You cannot add your own product to cart");
+
         if (_items.Any(i => i.ProductId == product.Id))
             throw new DomainException("Product already in cart");
 
-        var cartItem = CartItem.Create(Id, product.Id);
+        var cartItem = CartItem.Create(Id, product.Id, quantity);
         _items.Add(cartItem);
         SetUpdatedAt();
     }
+
 
     public void RemoveItem(Guid productId)
     {
@@ -59,10 +67,5 @@ public class Cart : BaseEntity
         SetUpdatedAt();
     }
 
-    public decimal GetTotal(IEnumerable<Product> products)
-    {
-        return products
-            .Where(p => _items.Any(i => i.ProductId == p.Id))
-            .Sum(p => p.Price);
-    }
+    
 }

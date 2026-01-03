@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using ReThread.Application.Interfaces;
+using ReThread.Application.Service;
+using ReThread.Infrastructure.Persistence;
 using ReThreaded.Application.Interfaces;
+using ReThreaded.Application.Service;
 using ReThreaded.Application.Services;
 using ReThreaded.Infrastructure.Data;
-
 //using Microsoft.EntityFrameworkCore.SqlSever;
 using ReThreaded.Infrastructure.Persistence;
 using ReThreaded.Infrastructure.Repositories;
@@ -30,6 +33,15 @@ builder.Services.AddScoped<IProductRepository, ProductRepository>();
 
 // Register Services
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IProductImageService, ProductImageService>();
+builder.Services.AddScoped<IProductImageRepository, ProductImageRepository>();
+builder.Services.AddScoped<ICartRepository, CartRepository>();
+builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+
+
 
 
 builder.Services.AddCors(options =>

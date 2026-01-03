@@ -1,4 +1,6 @@
-﻿using ReThreaded.Application.DTOs.Products;
+﻿using ReThread.Application.DTOs.Search;
+using ReThread.Domain.Common;
+using ReThreaded.Application.DTOs.Products;
 using ReThreaded.Domain.Entities;
 
 namespace ReThreaded.Application.Interfaces;
@@ -13,6 +15,8 @@ public interface IProductService
     Task<Guid> CreateAsync(CreateProductRequest request, Guid designerId);
 
     Task UpdateAsync(Guid productId, CreateProductRequest request, Guid designerId);
-
+    Task<PagedResult<ProductSearchResponseDto>> SearchAsync(
+            ProductSearchRequest request);
+}
 
 }

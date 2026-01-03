@@ -160,6 +160,26 @@ public class Product : BaseEntity
         SetUpdatedAt();
     }
 
+    public void DecreaseStock(int quantity)
+    {
+        if (quantity <= 0)
+            throw new DomainException("Quantity must be greater than zero");
+
+        if (StockQuantity < quantity)
+            throw new DomainException("Insufficient stock");
+
+        StockQuantity -= quantity;
+
+        if (StockQuantity == 0)
+        {
+            IsAvailable = false;
+            SoldAt = DateTime.UtcNow;
+        }
+
+        SetUpdatedAt();
+    }
+
+
     // -------------------- FEATURED --------------------
 
     public void MarkAsFeatured()

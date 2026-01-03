@@ -3,54 +3,57 @@ using ReThreaded.Application.Interfaces;
 using ReThreaded.Domain.Entities;
 using ReThreaded.Domain.Exceptions;
 
-public class ProductImageService : IProductImageService
+namespace ReThreaded.Application.Service
 {
-    private readonly IProductImageRepository _imageRepo;
-    private readonly IProductRepository _productRepo;
-
-    public ProductImageService(
-        IProductImageRepository imageRepo,
-        IProductRepository productRepo)
+    public class ProductImageService : IProductImageService
     {
-        _imageRepo = imageRepo;
-        _productRepo = productRepo;
-    }
+        private readonly IProductImageRepository _imageRepo;
+        private readonly IProductRepository _productRepo;
 
-    public async Task AddAsync(Guid productId, AddProductImageRequest request)
-    {
-        var product = await _productRepo.GetByIdAsync(productId);
-        if (product == null)
-            throw new DomainException("Product not found");
-
-        var image = ProductImage.Create(
-            productId,
-            request.ImageUrl,
-            request.ImageType,
-            request.DisplayOrder
-        );
-
-        await _imageRepo.AddAsync(image);
-    }
-
-    public async Task<List<ProductImageDto>> GetAsync(Guid productId)
-    {
-        var images = await _imageRepo.GetByProductIdAsync(productId);
-
-        return images.Select(i => new ProductImageDto
+        public ProductImageService(
+            IProductImageRepository imageRepo,
+            IProductRepository productRepo)
         {
-            Id = i.Id,
-            ImageUrl = i.ImageUrl,
-            ImageType = (int)i.ImageType,
-            DisplayOrder = i.DisplayOrder
-        }).ToList();
-    }
+            _imageRepo = imageRepo;
+            _productRepo = productRepo;
+        }
 
-    public async Task DeleteAsync(Guid imageId)
-    {
-        var image = await _imageRepo.GetByIdAsync(imageId);
-        if (image == null)
-            throw new DomainException("Image not found");
+        public async Task AddAsync(Guid productId, AddProductImageRequest request)
+        {
+            var product = await _productRepo.GetByIdAsync(productId);
+            if (product == null)
+                throw new DomainException("Product not found");
 
-        await _imageRepo.DeleteAsync(image);
+            var image = ProductImage.Create(
+                productId,
+                request.ImageUrl,
+                request.ImageType,
+                request.DisplayOrder
+            );
+
+            await _imageRepo.AddAsync(image);
+        }
+
+        public async Task<List<ProductImageDto>> GetAsync(Guid productId)
+        {
+            var images = await _imageRepo.GetByProductIdAsync(productId);
+
+            return images.Select(i => new ProductImageDto
+            {
+                Id = i.Id,
+                ImageUrl = i.ImageUrl,
+                ImageType = (int)i.ImageType,
+                DisplayOrder = i.DisplayOrder
+            }).ToList();
+        }
+
+        public async Task DeleteAsync(Guid imageId)
+        {
+            var image = await _imageRepo.GetByIdAsync(imageId);
+            if (image == null)
+                throw new DomainException("Image not found");
+
+            await _imageRepo.DeleteAsync(image);
+        }
     }
 }

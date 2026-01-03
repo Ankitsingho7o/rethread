@@ -2,38 +2,40 @@
 using ReThreaded.Application.Interfaces;
 using ReThreaded.Domain.Entities;
 using ReThreaded.Infrastructure.Persistence;
-
-public class ProductImageRepository : IProductImageRepository
+namespace ReThreaded.Infrastructure.Repositories
 {
-    private readonly ApplicationDbContext _context;
-
-    public ProductImageRepository(ApplicationDbContext context)
+    public class ProductImageRepository : IProductImageRepository
     {
-        _context = context;
-    }
+        private readonly ApplicationDbContext _context;
 
-    public async Task<List<ProductImage>> GetByProductIdAsync(Guid productId)
-    {
-        return await _context.ProductImages
-            .Where(i => i.ProductId == productId)
-            .OrderBy(i => i.DisplayOrder)
-            .ToListAsync();
-    }
+        public ProductImageRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
 
-    public async Task<ProductImage?> GetByIdAsync(Guid id)
-    {
-        return await _context.ProductImages.FindAsync(id);
-    }
+        public async Task<List<ProductImage>> GetByProductIdAsync(Guid productId)
+        {
+            return await _context.ProductImages
+                .Where(i => i.ProductId == productId)
+                .OrderBy(i => i.DisplayOrder)
+                .ToListAsync();
+        }
 
-    public async Task AddAsync(ProductImage image)
-    {
-        await _context.ProductImages.AddAsync(image);
-        await _context.SaveChangesAsync();
-    }
+        public async Task<ProductImage?> GetByIdAsync(Guid id)
+        {
+            return await _context.ProductImages.FindAsync(id);
+        }
 
-    public async Task DeleteAsync(ProductImage image)
-    {
-        _context.ProductImages.Remove(image);
-        await _context.SaveChangesAsync();
+        public async Task AddAsync(ProductImage image)
+        {
+            await _context.ProductImages.AddAsync(image);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteAsync(ProductImage image)
+        {
+            _context.ProductImages.Remove(image);
+            await _context.SaveChangesAsync();
+        }
     }
 }

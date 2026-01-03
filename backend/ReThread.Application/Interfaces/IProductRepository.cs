@@ -13,4 +13,13 @@ public interface IProductRepository
     Task UpdateAsync(Product product);
     Task DeleteAsync(Product product);
     Task<bool> ExistsAsync(Guid id);
+
+    Task<(IReadOnlyList<Product>, int)> SearchAsync(
+       string? query,
+       Guid? categoryId,
+       decimal? minPrice,
+       decimal? maxPrice,
+       bool onlyAvailable,
+       int page,
+       int pageSize);
 }

@@ -2,125 +2,140 @@ using ReThreaded.Domain.Common;
 using ReThreaded.Domain.Enums;
 using ReThreaded.Domain.Exceptions;
 
-namespace ReThreaded.Domain.Entities;
-
-public class Order : BaseEntity
+namespace ReThreaded.Domain.Entities
 {
-    public string OrderNumber { get; private set; }
-    public Guid UserId { get; private set; }
-    public decimal TotalAmount { get; private set; }
-    public OrderStatus Status { get; private set; }
-    public string? PaymentIntentId { get; private set; }
-    public string ShippingAddress { get; private set; }
-    public string? TrackingNumber { get; private set; }
-    public DateTime? PaidAt { get; private set; }
-    public DateTime? ShippedAt { get; private set; }
-    public DateTime? DeliveredAt { get; private set; }
 
-    // Navigation
-    public User User { get; private set; }
-
-    private readonly List<OrderItem> _items = new();
-    public IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
-
-    private Order() { }
-
-    public static Order Create(Guid userId, string shippingAddress)
+    public class Order : BaseEntity
     {
-        if (userId == Guid.Empty)
-            throw new DomainException("User ID is required");
+        public string OrderNumber { get; private set; }
+        public Guid UserId { get; private set; }
+        public decimal TotalAmount { get; private set; }
+        public OrderStatus Status { get; private set; }
+        public string? PaymentIntentId { get; private set; }
+        public string ShippingAddress { get; private set; }
+        public string? TrackingNumber { get; private set; }
+        public DateTime? PaidAt { get; private set; }
+        public DateTime? ShippedAt { get; private set; }
+        public DateTime? DeliveredAt { get; private set; }
 
-        if (string.IsNullOrWhiteSpace(shippingAddress))
-            throw new DomainException("Shipping address is required");
+        // Navigation
+        public User User { get; private set; }
 
-        return new Order
+        private readonly List<OrderItem> _items = new();
+        public IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
+
+        private Order() { }
+
+        public static Order Create(Guid userId, string shippingAddress)
         {
-            OrderNumber = GenerateOrderNumber(),
-            UserId = userId,
-            ShippingAddress = shippingAddress.Trim(),
-            Status = OrderStatus.Pending,
-            TotalAmount = 0
-        };
-    }
+            if (userId == Guid.Empty)
+                throw new DomainException("User ID is required");
 
-    public void AddProduct(Product product, Guid designerId)
-    {
-        if (Status != OrderStatus.Pending)
-            throw new DomainException("Cannot modify order after pending");
+            if (string.IsNullOrWhiteSpace(shippingAddress))
+                throw new DomainException("Shipping address is required");
 
-        if (!product.IsAvailable)
-            throw new DomainException("Product not available");
+            return new Order
+            {
+                OrderNumber = GenerateOrderNumber(),
+                UserId = userId,
+                ShippingAddress = shippingAddress.Trim(),
+                Status = OrderStatus.Pending,
+                TotalAmount = 0
+            };
+        }
 
-        var orderItem = OrderItem.Create(Id, product.Id, designerId, product.Price);
-        _items.Add(orderItem);
+        public void AddProduct(Product product, Guid designerId, int quantity)
+        {
+            if (Status != OrderStatus.Pending)
+                throw new DomainException("Cannot modify order after pending");
 
-        RecalculateTotal();
-        SetUpdatedAt();
-    }
+            if (_items.Any(i => i.ProductId == product.Id))
+                throw new DomainException("Product already added to order");
 
-    public void MarkAsPaid(string paymentIntentId)
-    {
-        if (Status != OrderStatus.Pending)
-            throw new DomainException("Order already processed");
+            if (!product.IsAvailable)
+                throw new DomainException("Product not available");
 
-        if (string.IsNullOrWhiteSpace(paymentIntentId))
-            throw new DomainException("Payment intent ID is required");
+            if (quantity <= 0)
+                throw new DomainException("Invalid quantity");
 
-        Status = OrderStatus.Paid;
-        PaymentIntentId = paymentIntentId;
-        PaidAt = DateTime.UtcNow;
-        SetUpdatedAt();
-    }
+            var orderItem = OrderItem.Create(
+                Id,
+                product.Id,
+                designerId,
+                product.Price,   // snapshot
+                quantity
+            );
 
-    public void MarkAsProcessing()
-    {
-        if (Status != OrderStatus.Paid)
-            throw new DomainException("Order must be paid first");
+            _items.Add(orderItem);
 
-        Status = OrderStatus.Processing;
-        SetUpdatedAt();
-    }
+            RecalculateTotal();
+            SetUpdatedAt();
+        }
 
-    public void MarkAsShipped(string trackingNumber)
-    {
-        if (Status != OrderStatus.Paid && Status != OrderStatus.Processing)
-            throw new DomainException("Cannot ship unpaid order");
+        public void MarkAsPaid(string paymentIntentId)
+        {
+            if (Status != OrderStatus.Pending)
+                throw new DomainException("Order already processed");
 
-        if (string.IsNullOrWhiteSpace(trackingNumber))
-            throw new DomainException("Tracking number is required");
+            if (string.IsNullOrWhiteSpace(paymentIntentId))
+                throw new DomainException("Payment intent ID is required");
 
-        Status = OrderStatus.Shipped;
-        TrackingNumber = trackingNumber.Trim();
-        ShippedAt = DateTime.UtcNow;
-        SetUpdatedAt();
-    }
+            Status = OrderStatus.Paid;
+            PaymentIntentId = paymentIntentId;
+            PaidAt = DateTime.UtcNow;
+            SetUpdatedAt();
+        }
 
-    public void MarkAsDelivered()
-    {
-        if (Status != OrderStatus.Shipped)
-            throw new DomainException("Order not shipped yet");
+        public void MarkAsProcessing()
+        {
+            if (Status != OrderStatus.Paid)
+                throw new DomainException("Order must be paid first");
 
-        Status = OrderStatus.Delivered;
-        DeliveredAt = DateTime.UtcNow;
-        SetUpdatedAt();
-    }
+            Status = OrderStatus.Processing;
+            SetUpdatedAt();
+        }
 
-    public void Cancel()
-    {
-        if (Status == OrderStatus.Shipped || Status == OrderStatus.Delivered)
-            throw new DomainException("Cannot cancel shipped/delivered order");
+        public void MarkAsShipped(string trackingNumber)
+        {
+            if (Status != OrderStatus.Paid && Status != OrderStatus.Processing)
+                throw new DomainException("Cannot ship unpaid order");
 
-        Status = OrderStatus.Cancelled;
-        SetUpdatedAt();
-    }
+            if (string.IsNullOrWhiteSpace(trackingNumber))
+                throw new DomainException("Tracking number is required");
 
-    private void RecalculateTotal()
-    {
-        TotalAmount = _items.Sum(i => i.Price);
-    }
+            Status = OrderStatus.Shipped;
+            TrackingNumber = trackingNumber.Trim();
+            ShippedAt = DateTime.UtcNow;
+            SetUpdatedAt();
+        }
 
-    private static string GenerateOrderNumber()
-    {
-        return $"RT-{DateTime.UtcNow:yyyy}-{Guid.NewGuid().ToString()[..8].ToUpper()}";
+        public void MarkAsDelivered()
+        {
+            if (Status != OrderStatus.Shipped)
+                throw new DomainException("Order not shipped yet");
+
+            Status = OrderStatus.Delivered;
+            DeliveredAt = DateTime.UtcNow;
+            SetUpdatedAt();
+        }
+
+        public void Cancel()
+        {
+            if (Status == OrderStatus.Shipped || Status == OrderStatus.Delivered)
+                throw new DomainException("Cannot cancel shipped/delivered order");
+
+            Status = OrderStatus.Cancelled;
+            SetUpdatedAt();
+        }
+
+        private void RecalculateTotal()
+        {
+            TotalAmount = _items.Sum(i => i.UnitPrice * i.Quantity);
+        }
+
+        private static string GenerateOrderNumber()
+        {
+            return $"RT-{DateTime.UtcNow:yyyy}-{Guid.NewGuid().ToString()[..8].ToUpper()}";
+        }
     }
 }
