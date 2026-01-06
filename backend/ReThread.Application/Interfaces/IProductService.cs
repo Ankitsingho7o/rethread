@@ -19,4 +19,4 @@ public interface IProductService
             ProductSearchRequest request);
 }
 
-}
+
